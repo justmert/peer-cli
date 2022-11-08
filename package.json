@@ -1,0 +1,26 @@
+{
+  "name": "ipfs-cli",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@chainsafe/libp2p-noise": "^10.0.1",
+    "@koush/wrtc": "^0.5.3",
+    "@libp2p/bootstrap": "^5.0.0",
+    "@libp2p/mplex": "^7.0.0",
+    "@libp2p/webrtc-direct": "^4.0.1",
+    "@libp2p/webrtc-star": "^5.0.3",
+    "@libp2p/websockets": "^5.0.0",
+    "cli-color": "^2.0.3",
+    "inquirer": "^9.1.4",
+    "ipfs-core": "^0.17.0",
+    "libp2p": "^0.40.0",
+    "tmp": "^0.2.1"
+  }
+}
