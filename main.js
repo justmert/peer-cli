@@ -10,134 +10,54 @@ import { exit } from "process";
 import { setMaxListeners } from "events";
 import navigateOption from "./mfs.js";
 // import peerNavigate from "./peer.js";
-var clc = require("cli-color");
 import * as IPFSNode from "ipfs-core";
 import { create } from "ipfs-http-client";
 import { URL } from "url";
 import { spawnSync } from "child_process";
+import { clearScreen, colorSpec } from "./utils.js";
+import p2pNode, { startP2P } from "./p2p.js";
+import { chatNavigate } from "./p2pChat.js";
+
 var spawn = require("child_process").spawn;
 const execSync = require("child_process").execSync;
 // import getFolderSize from "get-folder-size";
 
 setMaxListeners(1024);
-export var colorSpec = {
-  errorMsg: (x) => {
-    return colorSpec.errorIcon + "  " + clc.red.bold(x) + "\n\n";
-  },
-  warnMsg: (x) => {
-    return colorSpec.warnIcon + "  " + clc.yellow(x) + "\n\n";
-  },
-  infoMsg: (x) => {
-    return colorSpec.infoIcon + "  " + clc.cyan(x) + "\n\n";
-  },
-  errorIcon: clc.red.bold("✖"),
-  successIcon: clc.green.bold("✔"),
-  warnIcon: clc.yellow("⚠"),
-  infoIcon: clc.cyan("ℹ"),
-  promptIcon: clc.blue("➜"),
-  fileColor: clc.magenta,
-  dirColor: clc.green,
-};
 
-export default { colorSpec: colorSpec };
-const ui = new inquirer.ui.BottomBar();
-// ui.log.write(
-//   colorSpec.infoMsg(
-//     "ipfs-core package inits ipfs node in the application and has memory issues that cause the application run slowly. \nInstead, we recommend to init the ipfs node in a background process. Don't worry, we will the handle the daemon."
-//   )
-// );
-// const daemonQuestion = {
-//   type: "input",
-//   name: "deamon",
-//   message:
-//   "Would you want to start a deamon [y] or just use ipfs-core package[n] ?: ",
-// };
-var ipfs = await IPFSNode.create({
+// export default { colorSpec: colorSpec };
+export const ui = new inquirer.ui.BottomBar();
+export const ipfs = await IPFSNode.create({
   libp2p: {
     connectionManager: {
       autoDial: false,
     },
   },
 });
-// var httpApiEndpoint = undefined;
-// var ipfsProc = undefined;
-// function waitForDaemon(ms) {
-//   return new Promise((resolve) => {
-//     setTimeout(resolve, ms);
-//   });
-// }
 
-// await inquirer.prompt(daemonQuestion).then(async (answers) => {
-//   if (answers.deamon === "y") {
-//     ui.log.write("Starting ipfs in a background deamon process...");
-//     let maxWait = 16000;
-//     let curWait = 0;
-//     ipfsProc = spawn("jsipfs", ["daemon"], { detached: true });
-
-//     ipfsProc.stdout.setEncoding("utf8");
-//     ipfsProc.stdout.on("data", async (data) => {
-//       // ui.log.write(`stdout: ${data}`);
-//       var re = new RegExp(String.raw`HTTP.*\s(\/.*http)`);
-//       const matched = data.match(re);
-//       if (matched) {
-//         httpApiEndpoint = matched[1];
-//       }
-//       if (data.trim().includes("Daemon is ready")) {
-//         ui.log.write(colorSpec.infoMsg("Daemon is ready"));
-//         ipfs = create(httpApiEndpoint);
-//         ipfsProc.unref();
-//       }
-//       // ipfs = await create(new URL("/ip4/127.0.0.1/tcp/5002/http"));
-//     });
-//     ipfsProc.stderr.on("data", (data) => {
-//       ui.log.write(colorSpec.errorMsg(data));
-//       exitProgram("exit");
-//     });
-//     ipfsProc.on("close", (code) => {
-//       ui.log.write(colorSpec.errorMsg(data));
-//       exitProgram("exit");
-//     });
-//     while (ipfs === undefined) {
-//       const waitMs = 2000;
-//       await waitForDaemon(waitMs);
-//       curWait += waitMs;
-//       if (curWait > maxWait) {
-//         ui.log.write(colorSpec.errorMsg("Could not start ipfs daemon"));
-//         exit(1);
-//       }
-//     }
-//   } else {
-//     ui.log.write(colorSpec.infoMsg("Starting ipfs in the application..."));
-//     ipfs = await IPFSNode.create({
-//       libp2p: {
-//         connectionManager: {
-//           autoDial: false,
-//         },
-//       },
-//     });
-//   }
+startP2P();
+// p2pNode.connectionManager.acceptIncomingConnection((connection) => {
+//   console.log("Incoming connection", connection.remotePeer.toB58String());
+//   return true;
 // });
 
-// console.log(ipfs.libp2p.connectionManager.autoDial)
-// ipfs.libp2p.connectionManager.autoDial = false;
-// ipfs.libp2p.connectionManager.addEventListener("peer:connect", (peer) => {console.log('hiiiii')});
-var exitEntered = false;
-[
-  `exit`,
-  `SIGINT`,
-  `SIGUSR1`,
-  `SIGUSR2`,
-  `uncaughtException`,
-  `SIGTERM`,
-].forEach((eventType) => {
-  process.on(eventType, exitProgram.bind(null, eventType));
-});
 
-function exitProgram(eventType) {
-  console.log(colorSpec.infoMsg(`[${eventType}] Exiting program...`));
+// [
+//   `exit`,
+//   `SIGINT`,
+//   `SIGUSR1`,
+//   `SIGUSR2`,
+//   `uncaughtException`,
+//   `SIGTERM`,
+// ].forEach((eventType) => {
+//   console.trace()
+//   process.on(eventType, exitProgram.bind(null, eventType));
+// });
 
-  process.exit(0);
-}
+// function exitProgram(eventType) {
+//   console.log(colorSpec.infoMsg(`[${eventType}] Exiting program...`));
+  
+//   process.exit(0);
+// }
 
 const { readdir, stat } = require("fs/promises");
 const { join } = require("path");
@@ -206,7 +126,9 @@ async function byteProcess(x, y) {
 }
 
 // Clear the screen
-// process.stdout.write("\u001b[2J\u001b[0;0H");
+// clearScreen();
+// ui.updateBottomBar(colorSpec.infoMsg(`Peer ID: ${p2pNode.peerId}`));
+
 const saveToIpfs = async (providedPath) => {
   const fileStats = fs.lstatSync(providedPath);
   //example options to pass to IPFS
@@ -477,8 +399,12 @@ const mainPrompt = async () => {
         message: "What do you want to do?",
         choices: [
           {
-            value: "peer",
-            name: "Peer Network",
+            value: "chat",
+            name: "Peer Chat",
+          },
+          {
+            value: "transfer",
+            name: "Peer Transfer",
           },
           { value: "save", name: "Save file/dir to IPFS" },
           { value: "get", name: "Get file/dir from IPFS" },
@@ -490,8 +416,10 @@ const mainPrompt = async () => {
         ],
       })
       .then(async (answers) => {
-        if (answers.job === "peer") {
-          await peerNavigate(ui, ipfs);
+        if (answers.job === "chat") {
+          await chatNavigate();
+        } else if (answers.job === "transfer") {
+          await transferNavigate();
         } else if (answers.job === "save") {
           await inquirer
             .prompt({

@@ -12,7 +12,7 @@ import { stdin } from "process";
 import { concat as uint8ArrayConcat } from "uint8arrays/concat";
 import { TextEncoder } from "util";
 const tmp = require("tmp");
-import { colorSpec } from "./main.js";
+import { colorSpec } from "./utils.js";
 // import * as isIPFS from 'is-ipfs'
 
 const execSync = require("child_process").execSync;
