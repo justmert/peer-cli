@@ -103,7 +103,11 @@ p2pNode.connectionManager.addEventListener("peer:disconnect", (evt) => {
   // console.log(`Disconnected from ${connection.remotePeer.toString()}`);
 });
 
+// const x = p2pNode.connectionManager.acceptIncomingConnection(p2pNode.getMultiaddrs())
+// console.log(p2pNode.getMultiaddrs())
+export async function stopP2P(){
+  await p2pNode.stop();
+}
 export async function startP2P() {
   await p2pNode.start();
-  // ui.log.write(colorSpec.infoMsg("Peer ID:"));
 }

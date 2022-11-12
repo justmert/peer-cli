@@ -22,5 +22,8 @@
     "ipfs-core": "^0.17.0",
     "libp2p": "^0.40.0",
     "tmp": "^0.2.1"
+  },
+  "devDependencies": {
+    "node-key-sender": "^1.0.11"
   }
 }

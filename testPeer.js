@@ -93,34 +93,44 @@ await p2pNode.handle("/auth/request", async ({ stream, connection }) => {
     });
     
   
-  function authAnswer(stream, connection) {
-    console.log("\nauthanswer ^^^^^^^^^^^^^^");
-    //   console.log(stream);
-    //   console.log(connection);
-  
-    pipe(stream, (source) =>
-      (async function () {
-        for await (const msg of source) {
-          console.log("---------sss");
-          console.log(uint8ArrayToString(msg.subarray()));
-          if (uint8ArrayToString(msg.subarray()) === true.toString()) {
-              const stream = await p2pNode.dialProtocol(connection.remotePeer, '/chat')
-              // Send stdin to the stream
-              stdinToStream(stream)
-              // Read the stream and output to console
-              streamToConsole(stream)
-  
-              
-          } else {
-            console.log("other peer didnt accepted!");
-          }
-        }
-      })()
-    );
-  }
-  
+    async function dialAuth(peerMaStr) {
+        await p2pNode.dialProtocol(multiaddr(peerMaStr), "/auth/request");
+      }
+
+      function authAnswer(stream, connection) {
+        console.log("\nauthanswer ^^^^^^^^^^^^^^");
+        //   console.log(stream);
+        //   console.log(connection);
+      
+        pipe(stream, (source) =>
+          (async function () {
+            for await (const msg of source) {
+              console.log("---------sss");
+              console.log(uint8ArrayToString(msg.subarray()));
+              if (uint8ArrayToString(msg.subarray()) === true.toString()) {
+                  console.log('-----------------------------ww')
+              //   clearScreen();
+                console.log(colorSpec.infoMsg("CHAT STARTED"));
+                const stream = await p2pNode.dialProtocol(
+                  connection.remotePeer,
+                  "/chat"
+                );
+                //   inquirer.prompt().ui.close();
+                // Send stdin to the stream
+                stdinToStream(stream);
+                // Read the stream and output to console
+                streamToConsole(stream);
+              } else {
+                console.log("other peer didnt accepted!");
+              }
+            }
+          })()
+        );
+      }
+        
   async function authRequest(stream, connection) {
     clearScreen();
+    dialed = true
     console.log("\nauthrequest entered! <<<<<<<<<<<<<<<");
     // console.log(stream);
     // console.log(connection);
@@ -183,28 +193,36 @@ export function streamToConsole(stream) {
   );
 }
 
+var dialed = false
 // Listen for new peers
 p2pNode.addEventListener("peer:discovery", (evt) => {
   const peer = evt.detail;
   console.log(`Found peer ${peer.id.toString()}`);
 
-  // dial them when we discover them
-  p2pNode.dial(evt.detail.id).catch((err) => {
-    console.log(`Could not dial ${evt.detail.id}`, err);
-  });
+//   console.log('peer ma:')
+// console.log(peer.multiaddrs)
+//   console.log(p2pNode.connectionManager.acceptIncomingConnection(multiaddr(peer.multiaddrs.toString())))
+
+    if (dialed === false){
+        // dial them when we discover them
+        p2pNode.dial(evt.detail.id).catch((err) => {
+          console.log(`Could not dial ${evt.detail.id}`, err);
+        });
+
+    }
 });
 
-// Listen for new connections to peers
-p2pNode.connectionManager.addEventListener("peer:connect", (evt) => {
-  const connection = evt.detail;
-  console.log(`Connected to ${connection.remotePeer.toString()}`);
-});
+// // Listen for new connections to peers
+// p2pNode.connectionManager.addEventListener("peer:connect", (evt) => {
+//   const connection = evt.detail;
+//   console.log(`Connected to ${connection.remotePeer.toString()}`);
+// });
 
-// Listen for peers disconnecting
-p2pNode.connectionManager.addEventListener("peer:disconnect", (evt) => {
-  const connection = evt.detail;
-  console.log(`Disconnected from ${connection.remotePeer.toString()}`);
-});
+// // Listen for peers disconnecting
+// p2pNode.connectionManager.addEventListener("peer:disconnect", (evt) => {
+//   const connection = evt.detail;
+//   console.log(`Disconnected from ${connection.remotePeer.toString()}`);
+// });
 
 await p2pNode.start();
 

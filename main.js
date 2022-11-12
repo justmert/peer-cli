@@ -17,6 +17,7 @@ import { spawnSync } from "child_process";
 import { clearScreen, colorSpec } from "./utils.js";
 import p2pNode, { startP2P } from "./p2p.js";
 import { chatNavigate } from "./p2pChat.js";
+// const readline = require('readline');
 
 var spawn = require("child_process").spawn;
 const execSync = require("child_process").execSync;
@@ -24,8 +25,16 @@ const execSync = require("child_process").execSync;
 
 setMaxListeners(1024);
 
+// export var rl = readline.createInterface({
+//   input: process.stdin,
+//   output: process.stdout
+// }); 
+
+
 // export default { colorSpec: colorSpec };
 export const ui = new inquirer.ui.BottomBar();
+// export const prompt = inquirer.createPromptModule();
+
 export const ipfs = await IPFSNode.create({
   libp2p: {
     connectionManager: {
@@ -34,7 +43,7 @@ export const ipfs = await IPFSNode.create({
   },
 });
 
-startP2P();
+// startP2P();
 // p2pNode.connectionManager.acceptIncomingConnection((connection) => {
 //   console.log("Incoming connection", connection.remotePeer.toB58String());
 //   return true;
@@ -58,6 +67,7 @@ startP2P();
   
 //   process.exit(0);
 // }
+
 
 const { readdir, stat } = require("fs/promises");
 const { join } = require("path");
@@ -239,8 +249,7 @@ async function listActionOption(cidType, providedCid) {
     ]);
   }
   var returnStatus = undefined;
-  await inquirer
-    .prompt({
+  await inquirer.prompt({
       type: "list",
       name: "fileAction",
       message: "What to do?",
@@ -390,7 +399,7 @@ const getOption = async () => {
     });
 };
 
-const mainPrompt = async () => {
+const main = async () => {
   while (true) {
     await inquirer
       .prompt({
@@ -458,4 +467,4 @@ const mainPrompt = async () => {
   }
 };
 
-mainPrompt();
+main();
