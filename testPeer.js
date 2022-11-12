@@ -28,8 +28,7 @@ export const p2pNode = await createLibp2p({
   peerDiscovery: [wrtcStar.discovery],
 });
 
-
-const x = new Set()
+const x = new Set();
 // Listen for new peers
 p2pNode.addEventListener("peer:discovery", async (evt) => {
   // Dial to the remote peer (the "listener")
@@ -48,22 +47,22 @@ p2pNode.addEventListener("peer:discovery", async (evt) => {
   // stdinToStream(stream)
   // // Read the stream and output to console
   // streamToConsole(stream)
-  const ma = starAddr + "p2p/" + evt.detail.id
+  const ma = starAddr + "p2p/" + evt.detail.id;
   console.log(ma);
-  if (!x.has(ma)){
-      x.add(ma)
-      await dialAuth(ma)    
+  if (!x.has(ma)) {
+    x.add(ma);
+    await dialAuth(ma);
   }
 
   // const listenerMa = multiaddr(`/ip4/127.0.0.1/tcp/10333/p2p/${idListener.toString()}`)
-//   const stream = await p2pNode.dialProtocol(ma, "/chat");
-//   console.log("Dialer dialed to listener on protocol: /chat/1.0.0");
-//   console.log("Type a message and see what happens");
+  //   const stream = await p2pNode.dialProtocol(ma, "/chat");
+  //   console.log("Dialer dialed to listener on protocol: /chat/1.0.0");
+  //   console.log("Type a message and see what happens");
 
-//   // Send stdin to the stream
-//   stdinToStream(stream);
-//   // Read the stream and output to console
-//   streamToConsole(stream);
+  //   // Send stdin to the stream
+  //   stdinToStream(stream);
+  //   // Read the stream and output to console
+  //   streamToConsole(stream);
 });
 
 /* eslint-disable no-console */
@@ -74,90 +73,86 @@ import map from "it-map";
 import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
 import { toString as uint8ArrayToString } from "uint8arrays/to-string";
 
-
-
-
 await p2pNode.handle("/auth/request", async ({ stream, connection }) => {
-    authRequest(stream, connection);
-  });
-  
-  await p2pNode.handle("/auth/answer", async ({ stream, connection }) => {
-    authAnswer(stream, connection);
-  });
-  
-  await p2pNode.handle("/chat", async ({ stream }) => {
-      // Send stdin to the stream
-      stdinToStream(stream);
-      // Read the stream and output to console
-      streamToConsole(stream);
-    });
-    
-  
-    async function dialAuth(peerMaStr) {
-        await p2pNode.dialProtocol(multiaddr(peerMaStr), "/auth/request");
-      }
+  authRequest(stream, connection);
+});
 
-      function authAnswer(stream, connection) {
-        console.log("\nauthanswer ^^^^^^^^^^^^^^");
-        //   console.log(stream);
-        //   console.log(connection);
-      
-        pipe(stream, (source) =>
-          (async function () {
-            for await (const msg of source) {
-              console.log("---------sss");
-              console.log(uint8ArrayToString(msg.subarray()));
-              if (uint8ArrayToString(msg.subarray()) === true.toString()) {
-                  console.log('-----------------------------ww')
-              //   clearScreen();
-                console.log(colorSpec.infoMsg("CHAT STARTED"));
-                const stream = await p2pNode.dialProtocol(
-                  connection.remotePeer,
-                  "/chat"
-                );
-                //   inquirer.prompt().ui.close();
-                // Send stdin to the stream
-                stdinToStream(stream);
-                // Read the stream and output to console
-                streamToConsole(stream);
-              } else {
-                console.log("other peer didnt accepted!");
-              }
-            }
-          })()
-        );
+await p2pNode.handle("/auth/answer", async ({ stream, connection }) => {
+  authAnswer(stream, connection);
+});
+
+await p2pNode.handle("/chat", async ({ stream }) => {
+  // Send stdin to the stream
+  stdinToStream(stream);
+  // Read the stream and output to console
+  streamToConsole(stream);
+});
+
+async function dialAuth(peerMaStr) {
+  await p2pNode.dialProtocol(multiaddr(peerMaStr), "/auth/request");
+}
+
+function authAnswer(stream, connection) {
+  console.log("\nauthanswer ^^^^^^^^^^^^^^");
+  //   console.log(stream);
+  //   console.log(connection);
+
+  pipe(stream, (source) =>
+    (async function () {
+      for await (const msg of source) {
+        console.log("---------sss");
+        console.log(uint8ArrayToString(msg.subarray()));
+        if (uint8ArrayToString(msg.subarray()) === true.toString()) {
+          console.log("-----------------------------ww");
+          //   clearScreen();
+          console.log(colorSpec.infoMsg("CHAT STARTED"));
+          const stream = await p2pNode.dialProtocol(
+            connection.remotePeer,
+            "/chat"
+          );
+          //   inquirer.prompt().ui.close();
+          // Send stdin to the stream
+          stdinToStream(stream);
+          // Read the stream and output to console
+          streamToConsole(stream);
+        } else {
+          console.log("other peer didnt accepted!");
+        }
       }
-        
-  async function authRequest(stream, connection) {
-    clearScreen();
-    dialed = true
-    console.log("\nauthrequest entered! <<<<<<<<<<<<<<<");
-    // console.log(stream);
-    // console.log(connection);
-    let accepted = false;
-    const question = [
-      {
-        type: "confirm",
-        name: "request",
-        message: colorSpec.infoMsg(
-          `Hey! ${connection.remotePeer} wants to connect you. Do you accept?`
-        ),
-        default() {
-          return false;
-        },
+    })()
+  );
+}
+
+async function authRequest(stream, connection) {
+  clearScreen();
+  dialed = true;
+  console.log("\nauthrequest entered! <<<<<<<<<<<<<<<");
+  // console.log(stream);
+  // console.log(connection);
+  let accepted = false;
+  const question = [
+    {
+      type: "confirm",
+      name: "request",
+      message: colorSpec.infoMsg(
+        `Hey! ${connection.remotePeer} wants to connect you. Do you accept?`
+      ),
+      default() {
+        return false;
       },
-    ];
-    await inquirer.prompt(question).then(async (answers) => {
-      accepted = answers.request;
-    });
-    pipe(stream, () => {
-      p2pNode
-        .dialProtocol(connection.remotePeer, "/auth/answer")
-        .then((stream) => {
-          pipe([uint8ArrayFromString(accepted.toString())], stream);
-        });
-    });
-  }
+    },
+  ];
+  await inquirer.prompt(question).then(async (answers) => {
+    accepted = answers.request;
+  });
+  pipe(stream, () => {
+    p2pNode
+      .dialProtocol(connection.remotePeer, "/auth/answer")
+      .then((stream) => {
+        pipe([uint8ArrayFromString(accepted.toString())], stream);
+      });
+  });
+}
 
 export function stdinToStream(stream) {
   // Read utf-8 from stdin
@@ -193,23 +188,22 @@ export function streamToConsole(stream) {
   );
 }
 
-var dialed = false
+var dialed = false;
 // Listen for new peers
 p2pNode.addEventListener("peer:discovery", (evt) => {
   const peer = evt.detail;
   console.log(`Found peer ${peer.id.toString()}`);
 
-//   console.log('peer ma:')
-// console.log(peer.multiaddrs)
-//   console.log(p2pNode.connectionManager.acceptIncomingConnection(multiaddr(peer.multiaddrs.toString())))
+  //   console.log('peer ma:')
+  // console.log(peer.multiaddrs)
+  //   console.log(p2pNode.connectionManager.acceptIncomingConnection(multiaddr(peer.multiaddrs.toString())))
 
-    if (dialed === false){
-        // dial them when we discover them
-        p2pNode.dial(evt.detail.id).catch((err) => {
-          console.log(`Could not dial ${evt.detail.id}`, err);
-        });
-
-    }
+  if (dialed === false) {
+    // dial them when we discover them
+    p2pNode.dial(evt.detail.id).catch((err) => {
+      console.log(`Could not dial ${evt.detail.id}`, err);
+    });
+  }
 });
 
 // // Listen for new connections to peers

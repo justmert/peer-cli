@@ -28,20 +28,87 @@ setMaxListeners(1024);
 // export var rl = readline.createInterface({
 //   input: process.stdin,
 //   output: process.stdout
-// }); 
-
+// });
 
 // export default { colorSpec: colorSpec };
 export const ui = new inquirer.ui.BottomBar();
 // export const prompt = inquirer.createPromptModule();
 
-export const ipfs = await IPFSNode.create({
-  libp2p: {
-    connectionManager: {
-      autoDial: false,
-    },
-  },
-});
+// export const ipfs = await IPFSNode.create({
+//   libp2p: {
+//     connectionManager: {
+//       autoDial: false,
+//     },
+//   },
+// });
+
+const main = async () => {
+  while (true) {
+    await inquirer
+      .prompt({
+        type: "list",
+        name: "job",
+        message: "What do you want to do?",
+        choices: [
+          {
+            value: "chat",
+            name: "Peer Chat",
+          },
+          {
+            value: "transfer",
+            name: "Peer Transfer",
+          },
+          { value: "save", name: "Save file/dir to IPFS" },
+          { value: "get", name: "Get file/dir from IPFS" },
+          { value: "list", name: "List in IPFS" },
+          {
+            value: "navigate",
+            name: "Navigate in IPFS Mutable File System (MFS)",
+          },
+        ],
+      })
+      .then(async (answers) => {
+        if (answers.job === "chat") {
+          await chatNavigate();
+        } else if (answers.job === "transfer") {
+          await transferNavigate();
+        } else if (answers.job === "save") {
+          await inquirer
+            .prompt({
+              type: "input",
+              name: "path",
+              message: "Enter the path of the file to save: ",
+              validate(value) {
+                if (fs.existsSync(value)) {
+                  return true;
+                } else {
+                  return "Please enter a valid path";
+                }
+              },
+            })
+            .then(async (answers) => {
+              await saveToIpfs(answers.path);
+            });
+        } else if (answers.job === "get") {
+          await getOption();
+        } else if (answers.job === "list") {
+          await listOption();
+        } else if (answers.job === "navigate") {
+          await navigateOption(ui, ipfs);
+        }
+        // Use user feedback for... whatever!!
+      })
+      .catch((error) => {
+        if (error.isTtyError) {
+          console.log("Prompt couldn't be rendered in the current environment");
+        } else {
+          console.log("Something else went wrong");
+          console.log(error);
+        }
+        exit(1);
+      });
+  }
+};
 
 // startP2P();
 // p2pNode.connectionManager.acceptIncomingConnection((connection) => {
@@ -49,25 +116,19 @@ export const ipfs = await IPFSNode.create({
 //   return true;
 // });
 
-
 // [
 //   `exit`,
-//   `SIGINT`,
-//   `SIGUSR1`,
-//   `SIGUSR2`,
 //   `uncaughtException`,
-//   `SIGTERM`,
 // ].forEach((eventType) => {
 //   console.trace()
-//   process.on(eventType, exitProgram.bind(null, eventType));
+//   process.on(eventType, main.bind(null, eventType));
 // });
 
 // function exitProgram(eventType) {
 //   console.log(colorSpec.infoMsg(`[${eventType}] Exiting program...`));
-  
+
 //   process.exit(0);
 // }
-
 
 const { readdir, stat } = require("fs/promises");
 const { join } = require("path");
@@ -249,7 +310,8 @@ async function listActionOption(cidType, providedCid) {
     ]);
   }
   var returnStatus = undefined;
-  await inquirer.prompt({
+  await inquirer
+    .prompt({
       type: "list",
       name: "fileAction",
       message: "What to do?",
@@ -397,74 +459,6 @@ const getOption = async () => {
           }
         });
     });
-};
-
-const main = async () => {
-  while (true) {
-    await inquirer
-      .prompt({
-        type: "list",
-        name: "job",
-        message: "What do you want to do?",
-        choices: [
-          {
-            value: "chat",
-            name: "Peer Chat",
-          },
-          {
-            value: "transfer",
-            name: "Peer Transfer",
-          },
-          { value: "save", name: "Save file/dir to IPFS" },
-          { value: "get", name: "Get file/dir from IPFS" },
-          { value: "list", name: "List in IPFS" },
-          {
-            value: "navigate",
-            name: "Navigate in IPFS Mutable File System (MFS)",
-          },
-        ],
-      })
-      .then(async (answers) => {
-        if (answers.job === "chat") {
-          await chatNavigate();
-        } else if (answers.job === "transfer") {
-          await transferNavigate();
-        } else if (answers.job === "save") {
-          await inquirer
-            .prompt({
-              type: "input",
-              name: "path",
-              message: "Enter the path of the file to save: ",
-              validate(value) {
-                if (fs.existsSync(value)) {
-                  return true;
-                } else {
-                  return "Please enter a valid path";
-                }
-              },
-            })
-            .then(async (answers) => {
-              await saveToIpfs(answers.path);
-            });
-        } else if (answers.job === "get") {
-          await getOption();
-        } else if (answers.job === "list") {
-          await listOption();
-        } else if (answers.job === "navigate") {
-          await navigateOption(ui, ipfs);
-        }
-        // Use user feedback for... whatever!!
-      })
-      .catch((error) => {
-        if (error.isTtyError) {
-          console.log("Prompt couldn't be rendered in the current environment");
-        } else {
-          console.log("Something else went wrong");
-          console.log(error);
-        }
-        exit(1);
-      });
-  }
 };
 
 main();

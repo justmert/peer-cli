@@ -1,7 +1,6 @@
 "use strict";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-
 import { webRTCStar } from "@libp2p/webrtc-star";
 import { noise } from "@chainsafe/libp2p-noise";
 import { webRTCDirect } from "@libp2p/webrtc-direct";
@@ -21,91 +20,104 @@ import inquirer from "inquirer";
 import { clearScreen, colorSpec } from "./utils.js";
 import { ui } from "./main.js";
 import clc from "cli-color";
-// var ks = require('node-key-sender');
+import { exit } from "process";
 
-// const readline = require("readline");
-// var globalRl = null;
-// function askQuestion(query) {
-//   const rl = readline.createInterface({
-//     input: process.stdin,
-//     output: process.stdout,
-//   });
-//   globalRl = rl;
-//   return new Promise((resolve) =>
-//     rl.question(query, (ans) => {
-//       rl.close();
-//       resolve(ans);
-//     })
-//   );
-// }
+const readline = require("readline");
+var globalRl = null;
+function askQuestion(query) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  globalRl = rl;
+  return new Promise((resolve) =>
+    rl.question(query, (ans) => {
+      rl.close();
+      resolve(ans);
+    })
+  );
+}
 
-// var peerInq = null;
+const waitUntilCaptchaTokenInitialized = () => {
+  return new Promise((resolve) => {
+    const interval = setInterval(() => {
+      if (streamStopped) {
+        clearInterval(interval);
+        resolve(null);
+      }
+    }, 1000);
+  });
+};
 
+var streamStopped = false;
 var _visable = false;
 export async function chatNavigate() {
-  makeUnvisible();
   if (!p2pNode.isStarted()) {
     startP2P();
   }
   clearScreen();
-  ui.log.write(colorSpec.infoMsg("Your Peer ID: " + p2pNode.peerId));
-  const question = [
-    {
-      type: "list",
-      name: "chatType",
-      message: "What to do?",
-      choices: [
-        { value: "visible", name: "Make yourself connectable to other peers" },
-        { value: "discover", name: "Discover and connect other peers" },
-        { value: "connect", name: "Connect a peer with given Peer ID" },
-      ],
-    },
-  ];
-  await inquirer.prompt(question).then(async (answers) => {
-    if (answers.chatType == "discover") {
-      await discoverPeers();
-    } else if (answers.chatType == "connect") {
-      await connectPeer();
-    } else if (answers.chatType == "visible") {
-      await makeVisible();
-      console.log("xxxx");
-      const x = await inquirer
-        .prompt({
-          type: "input",
-          name: "peer",
-          message: "type anythingt to exit",
-        })
-        .then(async (answers) => {
-          console.log(answers.peer);
-        //   await dialAuth(answers.peer);
-        });
-        if (x == "exit") {
-            console.log("exit");
-        }
-    
-      ui.log.write(
-        colorSpec.infoMsg(
-          "Peers are waiting to connect us! Press any key to back."
-        )
-      );
-
-      //   await keypress();
-      //   await askQuestion(
-      //   );
-
-      console.log("yyyy");
-    }
-  });
-  if (p2pNode.isStarted()) {
-    stopP2P();
+  while (true) {
     makeUnvisible();
+    ui.log.write(colorSpec.infoMsg("Your Peer ID: " + p2pNode.peerId));
+    const question = [
+      {
+        type: "list",
+        name: "chatType",
+        message: "What to do?",
+        choices: [
+          {
+            value: "visible",
+            name: "Make yourself connectable to other peers",
+          },
+          { value: "discover", name: "Discover and connect other peers" },
+          { value: "connect", name: "Connect a peer with given Peer ID" },
+          { value: "back", name: "Return back to main prompt" },
+        ],
+      },
+    ];
+    await inquirer.prompt(question).then(async (answers) => {
+      if (answers.chatType == "discover") {
+        await makeUnvisible();
+        await discoverPeers();
+      } else if (answers.chatType == "connect") {
+        await makeUnvisible();
+        await connectPeer();
+        await askQuestion("Wait here! You are connecting to other peer.");
+
+        // await waitUntilCaptchaTokenInitialized();
+        // console.log("2222 are connecting to other peer.");
+
+        //   process.stdin.
+        //   await new Promise(function(resolve, reject) {
+        //     process.stdin.on("data", function(data) {
+        //         resolve();
+        //     });
+        // });
+
+        // const askQuestion = {
+        //   type: "input",
+        //   name: "proceed",
+        //   message: "wait here!",
+        // }
+        // inquirer.prompt(askQuestion).then(async (answers) => {
+        //   if (answers.proceed == "back") {
+        //     await chatNavigate();
+        //   }
+        // });
+      } else if (answers.chatType == "visible") {
+        await makeVisible();
+        await askQuestion("Wait here! Peers are connection you.");
+      } else if (answers.chatType == "back") {
+        await makeUnvisible();
+        if (p2pNode.isStarted()) {
+          stopP2P();
+        }
+        return;
+      }
+    });
   }
 }
 
-// async function searchScreen(){
-//     // get input from the user
-//     ui.log.write()
-// }
 async function isVisable() {
   return _visable;
 }
@@ -118,10 +130,6 @@ async function makeUnvisible() {
 }
 
 async function discoverPeers() {
-  // ui.log.write(colorSpec.warnMsg(`Your Peer ID: ${p2pNode.peerId}`));
-  //   ui.log.write(colorSpec.warnMsg("Discovering peers. Please wait..."));
-  // console.log(uniquePeers)
-  //   console.log(uniquePeers);
   let finishDiscover = false;
   while (!finishDiscover) {
     if (Object.keys(uniquePeers).length > 0) {
@@ -151,8 +159,6 @@ async function discoverPeers() {
             await connectPeer(answers.peer);
           }
         }
-        // console.log(answers.peer)
-        // await connectPeer(answers.peer);
       });
     } else {
       const question = [
@@ -185,7 +191,6 @@ async function connectPeer(peer = null) {
     let peerMaStr = null;
     let peerId = null;
     if (peer == null) {
-      // peer ma is not given
       const question = [
         {
           type: "input",
@@ -198,30 +203,36 @@ async function connectPeer(peer = null) {
       });
       peerMaStr = `${starAddr}/p2p/${peerId}`;
     } else {
-      // peer ma is given
       peerMaStr = peer.ma;
       peerId = peer.id;
     }
 
     ui.log.write(colorSpec.infoMsg(`Dialing to ${peerId}`));
-    console.log(multiaddr(peerMaStr));
-    console.log(typeof multiaddr(peerMaStr));
-
     await dialAuth(multiaddr(peerMaStr));
   } catch (error) {
     console.log(error);
   }
 }
 
-p2pNode.handle("/auth/request", async ({ stream, connection }) => {
-  authRequest(stream, connection);
+await p2pNode.handle("/auth/request", async ({ stream, connection }) => {
+  try {
+    await authRequest(stream, connection);
+  } catch (error) {
+    console.log(error);
+  }
 });
 
-p2pNode.handle("/auth/answer", async ({ stream, connection }) => {
-  authAnswer(stream, connection);
+await p2pNode.handle("/auth/answer", async ({ stream, connection }) => {
+  try {
+    await authAnswer(stream, connection);
+  } catch (error) {
+    console.log(error);
+  }
 });
 
-p2pNode.handle("/chat", async ({ stream, connection }) => {
+await p2pNode.handle("/chat", async ({ stream, connection }) => {
+  console.log("chat option girdi");
+
   // Send stdin to the stream
   stdinToStream(stream, connection);
   // Read the stream and output to console
@@ -229,36 +240,71 @@ p2pNode.handle("/chat", async ({ stream, connection }) => {
 });
 
 async function dialAuth(peerMaStr) {
-  await p2pNode.dialProtocol(multiaddr(peerMaStr), "/auth/request");
+  console.log("dial auth girdi");
+  await p2pNode.dialProtocol(peerMaStr, "/auth/request");
 }
 
-async function dialChat(peerMaStr) {
-  await p2pNode.dialProtocol(peerMaStr, "/chat");
-}
+// async function dialChat(peerMaStr) {
+//   console.log("dial chat girdi");
+//   console.log(peerMaStr);
+//   console.log("diiiiialll1");
 
-function authAnswer(stream, connection) {
-  console.log("\nauthanswer ^^^^^^^^^^^^^^");
-  //   console.log(stream);
-  //   console.log(connection);
+//   stdinToStream(stream);
+//   streamToConsole(stream);
 
+// }
+
+async function authAnswer(stream, connection) {
+  console.log("auth answer girdi");
+  if (globalRl) {
+    console.log("global lr entered!");
+    globalRl.close();
+    globalRl = null;
+    // process.stdin.removeAllListeners()
+    // globalRl = null;
+  }
+
+  // const question = [
+  //   {
+  //     type: "confirm",
+  //     name: "request",
+  //     message: colorSpec.infoMsg(
+  //       `Hey! ${connection.remotePeer} wants to connect you. Do you accept?`
+  //     ),
+  //     default() {
+  //       return false;
+  //     },
+  //   },
+  // ];
+  // await inquirer.prompt(question).then(async (answers) => {
+  //   accepted = answers.request;
+  // });
+  // process.stdin.listeners('data').forEach¬+¬(function(fn) {
+  //     process.stdin.removeAllListeners()
+  // });
+
+  clearScreen();
   pipe(stream, (source) =>
     (async function () {
       for await (const msg of source) {
-        console.log("---------sss");
-        console.log(uint8ArrayToString(msg.subarray()));
         if (uint8ArrayToString(msg.subarray()) === true.toString()) {
-          console.log("-----------------------------ww");
-          //   clearScreen();
           ui.log.write(colorSpec.infoMsg("CHAT STARTED"));
-          await dialChat(connection.remoteAddr);
+
+          console.log(connection.remoteAddr.toString());
+          // const stream = await dialChat(connection.remoteAddr, "/chat");
+          const streamChat = await p2pNode.dialProtocol(
+            connection.remoteAddr,
+            "/chat"
+          );
+          stdinToStream(streamChat, connection);
+          streamToConsole(streamChat, connection);
         } else {
-          console.log("other peer didnt accepted!");
+          ui.log.write(colorSpec.infoMsg("Other peer rejected your request"));
           const streamId = stream.id;
           stream.abort();
           stream.close();
           connection.removeStream(streamId);
           connection.close();
-          console.log("closed in other peer didnt accept!");
           return;
         }
       }
@@ -267,51 +313,21 @@ function authAnswer(stream, connection) {
 }
 
 async function authRequest(stream, connection) {
-  // prompt.ui.close()
-  // close the previous readline Interface
-  // rl = readline.createInterface({ // reset the readline Interface
-  //             input: process.stdin,
-  //             output: process.stdout
-  // });
-  // reset the readline Interface
-  //     console.log('hi')
-  //     inquirer.prompt.restoreDefaultPrompts();
-  //     inquirer.prompt({}).ui.close();
-
-  //     ui.close()
-
-  //     const rl = readline.createInterface({
-  //       input: process.stdin,
-  //       output: process.stdout,
-  //     });
-  //     rl.close();
-  //     console.log('2hi2')
-
-  //   ui.close()
-
-  //   clearScreen();
-  //   console.log(peerInq)
-  //   peerInq.ui.close()
-  //   peerInq.close()
-
+  console.log("auth request girdi");
+  if (globalRl) {
+    globalRl.close();
+    globalRl = null;
+    // globalRl = null;
+  }
   if ((await isVisable()) === false) {
-    // console.log('declined!')
     const streamId = stream.id;
     stream.abort();
     stream.close();
     connection.removeStream(streamId);
     connection.close();
-    console.log("closed! in visible");
     return;
   }
-  //   if (globalRl) {
-  //     globalRl.close();
-  //     globalRl = null;
-  //   }
   clearScreen();
-  //   console.log("\nauthrequest entered! <<<<<<<<<<<<<<<");
-  // console.log(stream);
-  // console.log(connection);
   let accepted = false;
   const question = [
     {
@@ -328,122 +344,45 @@ async function authRequest(stream, connection) {
   await inquirer.prompt(question).then(async (answers) => {
     accepted = answers.request;
   });
+
   pipe(stream, () => {
     p2pNode
       .dialProtocol(connection.remotePeer, "/auth/answer")
       .then((stream) => {
         pipe([uint8ArrayFromString(accepted.toString())], stream);
-        // console.log("hiiiiiiiii");
-        // console.log(accepted);
-        // if (!accepted) {
-        //   const streamId = stream.id;
-        //   stream.abort();
-        //   stream.close();
-        //   connection.removeStream(streamId);
-        //   connection.close();
-        //   console.log("closed!");
-        //   return;
-        // }
       });
-    const streamId = stream.id;
-    stream.abort();
-    stream.close();
-    connection.removeStream(streamId);
-    connection.close();
-    console.log("closed authh!");
-    // stream.abort();
-    console.log("aaaaa!");
   });
-  console.log("returned!wwww");
-  return;
+  if (!accepted) {
+    await makeUnvisible();
+    if (p2pNode.isStarted()) {
+      const streamId = stream.id;
+      stream.abort();
+      stream.close();
+      connection.removeStream(streamId);
+      connection.close();
+      await stopP2P();
+    }
+  }
 }
-//   inquirer.
-//   pipe(stream, (source) => (async function () {})()).then(async () => {
-//     p2pNode
-//       .dialProtocol(connection.remotePeer, ["/auth/answer"])
-//       .then((stream) => {
-//         console.log("Answer Send! -----------");
-//         pipe([uint8ArrayFromString("YES")], stream);
-//       });
-//   });
 
-// async function dialChat(peerMa){
-
-// }
-
-const clearLastLine = () => {
-  //   process.stdout.write("\n");
-  //   process.stdout.clearLine();
-  //   process.stdout.cursorTo(0);
-  process.stdout.write(colorSpec.sentMessageColor(`(You) ${p2pNode.peerId}# `));
-};
-
-// process.stdin.on("data", function(data) {
-//     console.log("recieved " + data)
-//  });
-
-var lastline = "";
 async function stdinToStream(stream, connection) {
   // Read utf-8 from stdin
   process.stdin.setEncoding("utf8");
-  //   process.stdin.setRawMode(true);
-  //   process.stdin.rawListeners("data").forEach((listener) => {
-  //     console.log(listener);
-  //   });
-  //   process.stdin.addListener('connect')
   process.stdout.write(colorSpec.sentMessageColor(`(You) ${p2pNode.peerId}# `));
   pipe(
-    // [uint8ArrayFromString('hey')],
-    // stream,
-    // create prompt
-    // inquirer.prompt({
-    //     type: 'input',
-    //     name: 'message',
-    //     message: 'Enter your message: '
-    // }),
-    // // get the answer
-    // (source) => (async function * () {
-    //     for await (const answer of source) {
-    //         yield answer.message
-    //     }
-    // })(),
-
     // Read from stdin (the source)
     process.stdin,
 
     (source) => {
       return (async function* () {
-        // console.log(source)
         for await (const msg of source) {
-          // process.stdin();
-          //   lastline = msg;
-          //   process.stdin.write(lastline);
-          //   process.stdin.write(lastline);
           process.stdout.write(
             colorSpec.sentMessageColor(`(You) ${p2pNode.peerId}# `)
           );
-          // process.stdin.write(msg)
           yield msg;
         }
       })();
     },
-
-    //   async function (source){
-    //   console.log('>')
-    //       return source
-    //   },
-    // process.stdin,
-    // process.stdin,
-    // await inquirer
-    //   .prompt({
-    //     type: "input",
-    //     name: "message",
-    //     message: "Enter Message: ",
-    //   })
-    //   .then(async (answers) => {
-    //     console.log(answers.message, ' ss')
-    //     return answers.message;
-    //   }),
     // Turn strings into buffers
     (source) => map(source, (string) => uint8ArrayFromString(string)),
     // Encode with length prefix (so receiving side knows how much data is coming)
@@ -453,7 +392,7 @@ async function stdinToStream(stream, connection) {
   );
 }
 
-function streamToConsole(stream, connection) {
+async function streamToConsole(stream, connection) {
   pipe(
     // Read from the stream (the source)
     stream.source,
@@ -476,7 +415,6 @@ function streamToConsole(stream, connection) {
           ) +
             msg.toString().replace("\n", "") +
             "\n"
-          // "\n"
         );
         process.stdout.write(
           colorSpec.sentMessageColor(`(You) ${p2pNode.peerId}# `)
