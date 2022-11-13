@@ -6,23 +6,17 @@ import all from "it-all";
 import fs from "fs";
 import { exit } from "process";
 import { setMaxListeners } from "events";
-import navigateOption from "./mfs.js";
+// import navigateOption from "./mfs.js";
 import * as IPFSNode from "ipfs-core";
-import p2pNode, { startP2P } from "./p2p.js";
-import { chatNavigate } from "./p2pChat.js";
+// import { chatNavigate } from "./p2pChat.js";
 import { clearScreen, colorSpec } from "./utils.js";
 import clc from "cli-color";
 const { readdir, stat } = require("fs/promises");
 const { join } = require("path");
-inquirer.registerPrompt("fuzzypath", require("inquirer-fuzzy-path"));
-const os = require("os");
 var path = require("path");
-// var tar = require("tar-stream");
-const archiver = require("archiver");
-const { unzipSync } = require("zlib");
 import tar from "tar-stream";
 const { Readable } = require("stream");
-const tmp = require("tmp");
+inquirer.registerPrompt("fuzzypath", require("inquirer-fuzzy-path"));
 
 setMaxListeners(1024);
 process.removeAllListeners("warning");
@@ -42,7 +36,7 @@ async function main() {
       .prompt({
         type: "list",
         name: "job",
-        prefix: clc.bold.red("❤"),
+        // prefix: clc.bold.red("❤"),
         message: "What do you want to do?",
         choices: [
           { value: "upload", name: "Upload file/dir to the IPFS" },
@@ -101,7 +95,6 @@ async function uploadOption() {
         clc.blackBright("type `back!` to exit") +
         "): ",
       validate(value) {
-        console.log("xxx: ", value);
         if (value === "back!") {
           return true;
         } else if (fs.existsSync(value)) {
@@ -212,7 +205,6 @@ const saveToIpfs = async (providedPath) => {
   await (async () => {
     totalProvidedSize = await dirSize(providedPath);
   })();
-  console.log("totalProvidedSize: ", totalProvidedSize);
   const addOptions = {
     pin: true,
     wrapWithDirectory: true,
@@ -345,37 +337,6 @@ async function saveLocal(providedCid) {
     .then(async (answers) => {
       await getFile(providedCid).then(async (buffer) => {
         await extractTar(buffer, answers.savePath);
-
-        // console.log('File: ', tmpobj.name);
-        // console.log('Filedescriptor: ', tmpobj.fd);
-
-        // If we don't need the file anymore we could manually call the removeCallback
-        // But that is not necessary if we didn't pass the keep option because the library
-        // will clean after itself.
-        // tmpobj.removeCallback();
-
-        // await extractTar(buffer, outputPath);
-
-        // var extract = tar.extract();
-        // extract.on("entry", function (header, stream, next) {
-        //   // header is the tar header
-        //   // stream is the content body (might be an empty stream)
-        //   // call next when you are done with this entry
-
-        //   stream.on("end", function () {
-        //     next(); // ready for next entry
-        //   });
-
-        //   stream.resume(); // just auto drain the stream
-        // });
-
-        // extract.on("finish", function () {
-        //   // all entries read
-        // });
-
-        // Readable.from(buffer).pipe(extract).pipe(outputstream);
-
-        // fs.createWriteStream(outputPath).pipe(tar.extract(buffer));
       });
     });
 }
@@ -546,4 +507,4 @@ const getOption = async () => {
     });
 };
 
-main();
+await main();
