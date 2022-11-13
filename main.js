@@ -16,6 +16,13 @@ const { readdir, stat } = require("fs/promises");
 const { join } = require("path");
 inquirer.registerPrompt("fuzzypath", require("inquirer-fuzzy-path"));
 const os = require("os");
+var path = require("path");
+// var tar = require("tar-stream");
+const archiver = require("archiver");
+const { unzipSync } = require("zlib");
+import tar from "tar-stream";
+const { Readable } = require("stream");
+const tmp = require("tmp");
 
 setMaxListeners(1024);
 process.removeAllListeners("warning");
@@ -89,7 +96,10 @@ async function uploadOption() {
     .prompt({
       type: "input",
       name: "path",
-      message: "Enter the path of the file to upload (type `back!` to exit): ",
+      message:
+        "Enter the path of the file to upload ( " +
+        clc.blackBright("type `back!` to exit") +
+        "): ",
       validate(value) {
         console.log("xxx: ", value);
         if (value === "back!") {
@@ -118,7 +128,8 @@ async function uploadOptionFuzzy() {
         itemType: "any",
         rootPath: `${process.cwd()}`,
         message:
-          "Enter the path of the file to upload (type `back!` to exit): ",
+          "Enter the path of the file/dir to upload " +
+          clc.blackBright("(type `back!` to exit): "),
         default: `${process.cwd()}`,
         suggestOnly: true,
         depthLimit: 1,
@@ -150,14 +161,14 @@ const dirSize = async (dir) => {
   const files = await readdir(dir, { withFileTypes: true });
 
   const paths = files.map(async (file) => {
-    const path = join(dir, file.name);
+    const fPath = join(dir, file.name);
 
     if (file.isDirectory()) {
-      return await dirSize(path);
+      return await dirSize(fPath);
     }
 
     if (file.isFile()) {
-      const { size } = await stat(path);
+      const { size } = await stat(fPath);
       return size;
     }
 
@@ -274,17 +285,100 @@ const getCidType = async (files) => {
   let cidType = undefined;
   if (files.length === 1) {
     if (files[0].name === files[0].path) cidType = "file";
-    else {
-      cidType = "dir";
-    }
-  } else if (files.length === 0) {
-    cidType = "empty";
-  } else {
-    cidType = "dir";
-  }
+    else cidType = "dir";
+  } else if (files.length === 0) cidType = "empty";
+  else cidType = "dir";
   return cidType;
 };
 
+function extractTar(buffer, outputPath) {
+  return new Promise((resolve) => {
+    let extract = tar.extract();
+
+    extract.on("entry", (header, stream, next) => {
+      let p = path.join(outputPath, header.name);
+      let opts = { mode: header.mode };
+      if (header.type === "directory") {
+        fs.mkdirSync(p, opts, (err) => {
+          if (err) throw err;
+          next();
+        });
+      } else {
+        stream.pipe(fs.createWriteStream(p, opts));
+        next();
+      }
+
+      stream.resume();
+      stream.on("end", function () {
+        next(); // ready for next entry
+      });
+    });
+    extract.on("finish", function () {
+      // all entries read
+      resolve();
+    });
+    Readable.from(buffer).pipe(extract);
+  });
+}
+
+async function saveLocal(providedCid) {
+  await inquirer
+    .prompt({
+      type: "input",
+      name: "savePath",
+      message:
+        "Enter the path to save the file " +
+        clc.blackBright(`(default is current path): `),
+      default() {
+        return process.cwd();
+      },
+      validate(value) {
+        if (value === "back!") {
+          return true;
+        } else if (fs.existsSync(value)) {
+          return true;
+        } else {
+          return "Please enter a valid path";
+        }
+      },
+    })
+    .then(async (answers) => {
+      await getFile(providedCid).then(async (buffer) => {
+        await extractTar(buffer, answers.savePath);
+
+        // console.log('File: ', tmpobj.name);
+        // console.log('Filedescriptor: ', tmpobj.fd);
+
+        // If we don't need the file anymore we could manually call the removeCallback
+        // But that is not necessary if we didn't pass the keep option because the library
+        // will clean after itself.
+        // tmpobj.removeCallback();
+
+        // await extractTar(buffer, outputPath);
+
+        // var extract = tar.extract();
+        // extract.on("entry", function (header, stream, next) {
+        //   // header is the tar header
+        //   // stream is the content body (might be an empty stream)
+        //   // call next when you are done with this entry
+
+        //   stream.on("end", function () {
+        //     next(); // ready for next entry
+        //   });
+
+        //   stream.resume(); // just auto drain the stream
+        // });
+
+        // extract.on("finish", function () {
+        //   // all entries read
+        // });
+
+        // Readable.from(buffer).pipe(extract).pipe(outputstream);
+
+        // fs.createWriteStream(outputPath).pipe(tar.extract(buffer));
+      });
+    });
+}
 async function listActionOption(cidType, providedCid) {
   let fileAction = [];
   if (cidType === "dir") {
@@ -317,17 +411,7 @@ async function listActionOption(cidType, providedCid) {
     })
     .then(async (answers) => {
       if (answers.fileAction === "save") {
-        await inquirer
-          .prompt({
-            type: "input",
-            name: "savePath",
-            message: "Enter the path to save the file: ",
-          })
-          .then(async (answers) => {
-            await getFile(providedCid).then((x) => {
-              fs.writeFileSync(answers.savePath, x);
-            });
-          });
+        await saveLocal(providedCid);
       } else if (answers.fileAction === "show") {
         const fileContent = await catFile(providedCid);
         ui.log.write(fileContent);
@@ -409,10 +493,23 @@ const getOption = async () => {
       const files = await listFiles(providedCid);
       const cidType = await getCidType(files);
 
-      ui.log.write("Contents: ");
+      ui.log.write("\n");
       files.forEach((file) => {
-        ui.log.write(`${file.type} - ${file.name} (${file.cid})`);
+        if (file.type === "dir") {
+          ui.log.write(
+            `${colorSpec.dirColor(file.type)} - ${file.name} ${clc.blackBright(
+              "(" + file.cid + ")"
+            )}`
+          );
+        } else {
+          ui.log.write(
+            `${colorSpec.fileColor(file.type)} - ${file.name} ${clc.blackBright(
+              "(" + file.cid + ")"
+            )}`
+          );
+        }
       });
+      ui.log.write("\n");
 
       let fileAction = [];
       if (cidType === "dir") {
@@ -440,17 +537,7 @@ const getOption = async () => {
         })
         .then(async (answers) => {
           if (answers.fileAction === "save") {
-            await inquirer
-              .prompt({
-                type: "input",
-                name: "savePath",
-                message: "Enter the path to save the file: ",
-              })
-              .then(async (answers) => {
-                await getFile(providedCid).then((x) => {
-                  fs.writeFileSync(answers.savePath, x);
-                });
-              });
+            await saveLocal(providedCid);
           } else if (answers.fileAction === "show") {
             const fileContent = await catFile(providedCid);
             ui.log.write(fileContent);
