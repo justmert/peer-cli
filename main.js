@@ -4,52 +4,47 @@ const require = createRequire(import.meta.url);
 import inquirer from "inquirer";
 import all from "it-all";
 import fs from "fs";
-import path from "path";
-import { Blob } from "buffer";
 import { exit } from "process";
 import { setMaxListeners } from "events";
 import navigateOption from "./mfs.js";
-// import peerNavigate from "./peer.js";
 import * as IPFSNode from "ipfs-core";
-import { create } from "ipfs-http-client";
-import { URL } from "url";
-import { spawnSync } from "child_process";
-import { clearScreen, colorSpec } from "./utils.js";
 import p2pNode, { startP2P } from "./p2p.js";
 import { chatNavigate } from "./p2pChat.js";
-// const readline = require('readline');
-
-var spawn = require("child_process").spawn;
-const execSync = require("child_process").execSync;
-// import getFolderSize from "get-folder-size";
+import { clearScreen, colorSpec } from "./utils.js";
+import clc from "cli-color";
+const { readdir, stat } = require("fs/promises");
+const { join } = require("path");
+inquirer.registerPrompt("fuzzypath", require("inquirer-fuzzy-path"));
+const os = require("os");
 
 setMaxListeners(1024);
+process.removeAllListeners("warning");
 
-// export var rl = readline.createInterface({
-//   input: process.stdin,
-//   output: process.stdout
-// });
-
-// export default { colorSpec: colorSpec };
 export const ui = new inquirer.ui.BottomBar();
-// export const prompt = inquirer.createPromptModule();
+export const ipfs = await IPFSNode.create({
+  libp2p: {
+    connectionManager: {
+      autoDial: false,
+    },
+  },
+});
 
-// export const ipfs = await IPFSNode.create({
-//   libp2p: {
-//     connectionManager: {
-//       autoDial: false,
-//     },
-//   },
-// });
-
-const main = async () => {
+async function main() {
   while (true) {
     await inquirer
       .prompt({
         type: "list",
         name: "job",
+        prefix: clc.bold.red("❤"),
         message: "What do you want to do?",
         choices: [
+          { value: "upload", name: "Upload file/dir to the IPFS" },
+          { value: "get", name: "Show/Save file/dir content from the IPFS" },
+          { value: "list", name: "List in the IPFS" },
+          {
+            value: "navigate",
+            name: "Navigate in IPFS MFS",
+          },
           {
             value: "chat",
             name: "Peer Chat",
@@ -58,13 +53,6 @@ const main = async () => {
             value: "transfer",
             name: "Peer Transfer",
           },
-          { value: "save", name: "Save file/dir to IPFS" },
-          { value: "get", name: "Get file/dir from IPFS" },
-          { value: "list", name: "List in IPFS" },
-          {
-            value: "navigate",
-            name: "Navigate in IPFS Mutable File System (MFS)",
-          },
         ],
       })
       .then(async (answers) => {
@@ -72,31 +60,17 @@ const main = async () => {
           await chatNavigate();
         } else if (answers.job === "transfer") {
           await transferNavigate();
-        } else if (answers.job === "save") {
-          await inquirer
-            .prompt({
-              type: "input",
-              name: "path",
-              message: "Enter the path of the file to save: ",
-              validate(value) {
-                if (fs.existsSync(value)) {
-                  return true;
-                } else {
-                  return "Please enter a valid path";
-                }
-              },
-            })
-            .then(async (answers) => {
-              await saveToIpfs(answers.path);
-            });
+        } else if (answers.job === "upload") {
+          clearScreen();
+          await uploadOptionFuzzy();
         } else if (answers.job === "get") {
+          clearScreen();
           await getOption();
         } else if (answers.job === "list") {
           await listOption();
         } else if (answers.job === "navigate") {
-          await navigateOption(ui, ipfs);
+          await navigateOption();
         }
-        // Use user feedback for... whatever!!
       })
       .catch((error) => {
         if (error.isTtyError) {
@@ -108,30 +82,69 @@ const main = async () => {
         exit(1);
       });
   }
-};
+}
 
-// startP2P();
-// p2pNode.connectionManager.acceptIncomingConnection((connection) => {
-//   console.log("Incoming connection", connection.remotePeer.toB58String());
-//   return true;
-// });
+async function uploadOption() {
+  await inquirer
+    .prompt({
+      type: "input",
+      name: "path",
+      message: "Enter the path of the file to upload (type `back!` to exit): ",
+      validate(value) {
+        console.log("xxx: ", value);
+        if (value === "back!") {
+          return true;
+        } else if (fs.existsSync(value)) {
+          return true;
+        } else {
+          return "Please enter a valid path";
+        }
+      },
+    })
+    .then(async (answers) => {
+      if (answers.path === "back!") {
+        return;
+      }
+      await saveToIpfs(answers.path);
+    });
+}
 
-// [
-//   `exit`,
-//   `uncaughtException`,
-// ].forEach((eventType) => {
-//   console.trace()
-//   process.on(eventType, main.bind(null, eventType));
-// });
+async function uploadOptionFuzzy() {
+  await inquirer
+    .prompt([
+      {
+        type: "fuzzypath",
+        name: "path",
+        itemType: "any",
+        rootPath: `${process.cwd()}`,
+        message:
+          "Enter the path of the file to upload (type `back!` to exit): ",
+        default: `${process.cwd()}`,
+        suggestOnly: true,
+        depthLimit: 1,
+        validate(value) {
+          if (value === "back!") {
+            return true;
+          } else if (fs.existsSync(value)) {
+            return true;
+          } else {
+            return "Please enter a valid path";
+          }
+        },
+      },
+    ])
+    .then(async (answers) => {
+      if (answers.path === "back!") {
+        return;
+      }
+      await saveToIpfs(answers.path);
+    });
+}
 
-// function exitProgram(eventType) {
-//   console.log(colorSpec.infoMsg(`[${eventType}] Exiting program...`));
-
-//   process.exit(0);
-// }
-
-const { readdir, stat } = require("fs/promises");
-const { join } = require("path");
+var totalStdoutColumns = process.stdout.columns || 100;
+process.stdout.on("resize", function () {
+  totalStdoutColumns = process.stdout.columns;
+});
 
 const dirSize = async (dir) => {
   const files = await readdir(dir, { withFileTypes: true });
@@ -139,11 +152,12 @@ const dirSize = async (dir) => {
   const paths = files.map(async (file) => {
     const path = join(dir, file.name);
 
-    if (file.isDirectory()) return await dirSize(path);
+    if (file.isDirectory()) {
+      return await dirSize(path);
+    }
 
     if (file.isFile()) {
       const { size } = await stat(path);
-
       return size;
     }
 
@@ -155,83 +169,63 @@ const dirSize = async (dir) => {
     .reduce((i, size) => i + size, 0);
 };
 
-var totalStdoutColumns = process.stdout.columns || 100;
-process.stdout.on("resize", function () {
-  totalStdoutColumns = process.stdout.columns;
-});
-
-var totalUploadedBytes = 0;
-var totalDirSize = 0;
-var curFileTotalSize = 0;
-var lastFile = undefined;
-var lastValue = 0;
+var ipfsTotalByteUploaded = 0;
+var totalProvidedSize = 0;
 async function byteProcess(x, y) {
-  console.log("file", y);
-  lastValue = x;
-  if (lastFile === undefined) {
-    lastFile = y;
-    curFileTotalSize = x;
-  } else {
-    if (lastFile === y) {
-      curFileTotalSize = x;
-      console.log("curfile updated: ", curFileTotalSize);
-    } else {
-      console.log("hi");
-      console.log("curfile total ", curFileTotalSize);
-      totalUploadedBytes += curFileTotalSize;
-      curFileTotalSize = x;
-      lastFile = y;
-    }
-  }
-  console.log("-------------");
-  console.log("uploaded updated: ", totalUploadedBytes);
+  ipfsTotalByteUploaded = ipfsTotalByteUploaded + x;
+  let barPercent = Math.ceil(
+    (ipfsTotalByteUploaded / totalProvidedSize) * totalStdoutColumns
+  );
+  let realPercent = Math.min(
+    Math.ceil((ipfsTotalByteUploaded / totalProvidedSize) * 100),
+    99
+  );
 
-  // totalUploadedBytes += x;
-  // let percent = Math.floor(
-  //   (totalUploadedBytes / totalDirSize) * totalStdoutColumns
-  // );
-  // console.log(percent)
-  // let bar = "█".repeat(percent);
-  // let bottomBar = colorSpec.infoMsg(`Uploading: ${percent.toString()}% ${bar}`);
-  // ui.updateBottomBar(bottomBar);
+  let prefix = `Uploading: ${realPercent.toString()}% `;
+  let prefixLength = prefix.length;
+  let bar = "█".repeat(
+    Math.min(
+      Math.max(barPercent - prefixLength - 3, 1),
+      totalStdoutColumns - prefixLength - 4
+    )
+  );
+  let bottomBar = colorSpec.infoMsg(`${prefix}${bar}`);
+  ui.updateBottomBar(bottomBar);
 }
 
-// Clear the screen
-// clearScreen();
-// ui.updateBottomBar(colorSpec.infoMsg(`Peer ID: ${p2pNode.peerId}`));
-
 const saveToIpfs = async (providedPath) => {
+  ipfsTotalByteUploaded = 0;
+  totalProvidedSize = 0;
   const fileStats = fs.lstatSync(providedPath);
-  //example options to pass to IPFS
+
+  await (async () => {
+    totalProvidedSize = await dirSize(providedPath);
+  })();
+  console.log("totalProvidedSize: ", totalProvidedSize);
   const addOptions = {
-    pin: false,
+    pin: true,
     wrapWithDirectory: true,
     timeout: 1000 * 60 * 5,
-    // progress: async (progress, filePath) => {
-    //  await byteProcess(progress, filePath);
-    // },
+    progress: byteProcess,
   };
 
   if (fileStats.isDirectory()) {
-    // const size = await dirSize(providedPath);
-    // console.log('total dir size', size)
-    // totalDirSize = size;
     const globSourceOptions = {
       recursive: true,
       hidden: true,
     };
-    for await (const file of IPFSNode.globSource(
-      providedPath,
-      "**/*",
-      globSourceOptions
+
+    for await (const addedFile of ipfs.addAll(
+      IPFSNode.globSource(providedPath, "**/*", globSourceOptions),
+      addOptions
     )) {
-      const addedFile = await ipfs.add(file, addOptions);
       if (addedFile.path.trim() === "") {
         ui.log.write(
-          `\nRoot directory ${providedPath} added to IPFS with CID: ${addedFile.cid}`
+          colorSpec.infoMsg(
+            `Root directory ${providedPath} added to IPFS with CID: ${addedFile.cid}`
+          )
         );
       } else {
-        // await waitForDaemon(200);
         ui.log.write(
           `${providedPath}/${addedFile.path} added with CID ${addedFile.cid}`
         );
@@ -244,11 +238,15 @@ const saveToIpfs = async (providedPath) => {
       mtime: fileStats.mtime,
     };
     const addedFile = await ipfs.add(fileObj, addOptions);
-    ui.log.write(`File ${providedPath} added with CID ${addedFile.cid}`);
+    ui.log.write(
+      colorSpec.infoMsg(`File ${providedPath} added with CID ${addedFile.cid}`)
+    );
   }
-  // console.log("total uploaded bytes", totalUploadedBytes);
-  // totalUploadedBytes = 0;
-  // totalDirSize = 0;
+  ui.updateBottomBar(
+    clc.magenta(
+      `Upload complete! Total Bytes Uploaded: ${ipfsTotalByteUploaded}\n\n`
+    )
+  );
 };
 
 const getFile = async (cid) => {

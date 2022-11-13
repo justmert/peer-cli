@@ -17,8 +17,10 @@
     "@libp2p/webrtc-direct": "^4.0.1",
     "@libp2p/webrtc-star": "^5.0.3",
     "@libp2p/websockets": "^5.0.0",
+    "async": "^3.2.4",
     "cli-color": "^2.0.3",
     "inquirer": "^9.1.4",
+    "inquirer-fuzzy-path": "^2.3.0",
     "ipfs-core": "^0.17.0",
     "libp2p": "^0.40.0",
     "tmp": "^0.2.1"

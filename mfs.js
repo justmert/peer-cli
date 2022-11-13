@@ -1,11 +1,8 @@
 "use strict";
 import inquirer from "inquirer";
-import * as IPFS from "ipfs-core";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 var clc = require("cli-color");
-var ui = undefined;
-var ipfs = undefined;
 import fs from "fs";
 import { env } from "node:process";
 import { stdin } from "process";
@@ -13,7 +10,7 @@ import { concat as uint8ArrayConcat } from "uint8arrays/concat";
 import { TextEncoder } from "util";
 const tmp = require("tmp");
 import { colorSpec } from "./utils.js";
-// import * as isIPFS from 'is-ipfs'
+import { ipfs, ui } from "./main.js";
 
 const execSync = require("child_process").execSync;
 tmp.setGracefulCleanup();
@@ -308,9 +305,7 @@ const clearScreen = () => {
   process.stdout.write("\u001b[2J\u001b[0;0H");
 };
 
-export default async function navigateOption(localUI, localIpfs) {
-  ui = localUI;
-  ipfs = localIpfs;
+export default async function navigateOption() {
   clearScreen();
 
   ui.log.write(
