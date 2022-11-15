@@ -21,10 +21,10 @@ import { clearScreen, colorSpec } from "./utils.js";
 import { ui } from "./main.js";
 import clc from "cli-color";
 import { exit } from "process";
-const readline = require("readline");
 
 var globalRl = null;
 function askQuestion(query) {
+  const readline = require("readline");
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,

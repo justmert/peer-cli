@@ -6,9 +6,9 @@ import all from "it-all";
 import fs from "fs";
 import { exit } from "process";
 import { setMaxListeners } from "events";
-// import navigateOption from "./mfs.js";
+import mfsOption from "./mfs.js";
 import * as IPFSNode from "ipfs-core";
-// import { chatNavigate } from "./p2pChat.js";
+import { chatNavigate } from "./p2pChat.js";
 import { clearScreen, colorSpec } from "./utils.js";
 import clc from "cli-color";
 const { readdir, stat } = require("fs/promises");
@@ -17,6 +17,7 @@ var path = require("path");
 import tar from "tar-stream";
 const { Readable } = require("stream");
 inquirer.registerPrompt("fuzzypath", require("inquirer-fuzzy-path"));
+import { CID } from "multiformats/cid";
 
 setMaxListeners(1024);
 process.removeAllListeners("warning");
@@ -31,12 +32,13 @@ export const ipfs = await IPFSNode.create({
 });
 
 async function main() {
+  clearScreen();
   while (true) {
     await inquirer
       .prompt({
         type: "list",
         name: "job",
-        // prefix: clc.bold.red("❤"),
+        prefix: clc.bold.red("❤"),
         message: "What do you want to do?",
         choices: [
           { value: "upload", name: "Upload file/dir to the IPFS" },
@@ -70,7 +72,7 @@ async function main() {
         } else if (answers.job === "list") {
           await listOption();
         } else if (answers.job === "navigate") {
-          await navigateOption();
+          await mfsOption();
         }
       })
       .catch((error) => {
@@ -202,9 +204,6 @@ const saveToIpfs = async (providedPath) => {
   totalProvidedSize = 0;
   const fileStats = fs.lstatSync(providedPath);
 
-  await (async () => {
-    totalProvidedSize = await dirSize(providedPath);
-  })();
   const addOptions = {
     pin: true,
     wrapWithDirectory: true,
@@ -213,6 +212,9 @@ const saveToIpfs = async (providedPath) => {
   };
 
   if (fileStats.isDirectory()) {
+    await (async () => {
+      totalProvidedSize = await dirSize(providedPath);
+    })();
     const globSourceOptions = {
       recursive: true,
       hidden: true,
@@ -235,6 +237,7 @@ const saveToIpfs = async (providedPath) => {
       }
     }
   } else {
+    totalProvidedSize = fileStats.size
     const fileObj = {
       path: providedPath,
       content: fs.createReadStream(providedPath),
@@ -245,9 +248,10 @@ const saveToIpfs = async (providedPath) => {
       colorSpec.infoMsg(`File ${providedPath} added with CID ${addedFile.cid}`)
     );
   }
-  ui.updateBottomBar(
+  ui.updateBottomBar("");
+  ui.log.write(
     clc.magenta(
-      `Upload complete! Total Bytes Uploaded: ${ipfsTotalByteUploaded}\n\n`
+      `Upload complete! Total Bytes Uploaded: ${ipfsTotalByteUploaded}\n`
     )
   );
 };
@@ -387,16 +391,32 @@ const listOption = async () => {
     .prompt({
       type: "input",
       name: "ipfsPath",
-      message: "Enter the CID to list: ",
+      message:
+        "Enter the CID of file/directory " +
+        clc.blackBright("(type `back!` to go back): "),
       validate(value) {
-        if (value === undefined || value === null || value.trim() === "") {
-          return "Please enter a valid CID";
+        if (value === "back!") {
+          return true;
+        } else if (
+          value === undefined ||
+          value === null ||
+          value.trim() === ""
+        ) {
+          return "Can not be empty!";
         } else {
+          try {
+            CID.parse(value);
+          } catch (error) {
+            return "Please enter a valid CID";
+          }
           return true;
         }
       },
     })
     .then(async (answers) => {
+      if (answers.ipfsPath === "back!") {
+        return;
+      }
       var providedCid = answers.ipfsPath;
       var lastPath = providedCid;
       while (providedCid) {
@@ -440,16 +460,32 @@ const getOption = async () => {
     .prompt({
       type: "input",
       name: "ipfsPath",
-      message: "Enter the CID of file/directory: ",
+      message:
+        "Enter the CID of file/directory " +
+        clc.blackBright("(type `back!` to go back): "),
       validate(value) {
-        if (value === undefined || value === null || value.trim() === "") {
-          return "Please enter a valid CID";
+        if (value === "back!") {
+          return true;
+        } else if (
+          value === undefined ||
+          value === null ||
+          value.trim() === ""
+        ) {
+          return "Can not be empty!";
         } else {
+          try {
+            CID.parse(value);
+          } catch (error) {
+            return "Please enter a valid CID";
+          }
           return true;
         }
       },
     })
     .then(async (answers) => {
+      if (answers.ipfsPath === "back!") {
+        return;
+      }
       const providedCid = answers.ipfsPath;
       const files = await listFiles(providedCid);
       const cidType = await getCidType(files);
