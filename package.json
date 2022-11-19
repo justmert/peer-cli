@@ -12,9 +12,7 @@
   "dependencies": {
     "@chainsafe/libp2p-noise": "^10.0.1",
     "@koush/wrtc": "^0.5.3",
-    "@libp2p/bootstrap": "^5.0.0",
     "@libp2p/mplex": "^7.0.0",
-    "@libp2p/webrtc-direct": "^4.0.1",
     "@libp2p/webrtc-star": "^5.0.3",
     "@libp2p/websockets": "^5.0.0",
     "async": "^3.2.4",
