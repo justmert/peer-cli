@@ -12,6 +12,7 @@ import { getOption } from "./options/get.js";
 import { listOption } from "./options/list.js";
 import { mfsOption } from "../mfs/mfs.js";
 import { chatNavigate } from "../p2p/chat.js";
+import figlet from "figlet";
 
 setMaxListeners(1024);
 process.removeAllListeners("warning");
@@ -36,11 +37,23 @@ export const ipfs = await IPFSNode.create({
 //   process.exit(0);
 // }
 
-// function exitProgram(eventType) {
-//   console.log(colorSpec.infoMsg(`[${eventType}] Exiting program...`));
+export const welcomeScreen = async () => {
+  await clearScreen();
+  ui.log.write(
+    clc.cyan(
+      figlet.textSync("IPFS CLI", {
+        font: "Standard",
+        horizontalLayout: "default",
+        verticalLayout: "default",
+      })
+    )
+  );
+};
 
 clearScreen();
+
 async function main() {
+  await welcomeScreen();
   while (true) {
     await inquirer
       .prompt({
