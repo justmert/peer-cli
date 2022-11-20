@@ -17,7 +17,7 @@ export const welcomeScreen = async () => {
   await clearScreen();
   ui.log.write(
     clc.cyan(
-      figlet.textSync("IPFS CLI", {
+      figlet.textSync("IPFS MFS", {
         font: "Standard",
         horizontalLayout: "default",
         verticalLayout: "default",
