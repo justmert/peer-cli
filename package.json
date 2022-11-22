@@ -1,11 +1,15 @@
 {
   "name": "peer-cli",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Swiss Army Knife for IPFS",
   "main": "src/main/main.js",
-  "scripts": {
-  },
-  "keywords": ["IPFS", "PEER", "CLI"],
+  "scripts": {},
+  "bin": "src/main/main.js",
+  "keywords": [
+    "IPFS",
+    "PEER",
+    "CLI"
+  ],
   "type": "module",
   "author": "Mert Köklü",
   "license": "MIT",
