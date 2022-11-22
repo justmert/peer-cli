@@ -9,7 +9,7 @@ const manCD = `\
 ${clc.bold.cyan("cd")} [path] - Change directory`;
 
 const manPWD = `\
-${clc.bold.cyan("pwd")} - output the current working directory`;
+${clc.bold.cyan("pwd")} - Output the current working directory`;
 
 const manMKDIR = `\
 ${clc.bold.cyan("mkdir")} [path, ...] - Make directory`;
@@ -24,7 +24,7 @@ const manFLUSH = `\
 ${clc.bold.cyan("flush")} [path, ...] - Flush a given path's data to the disk`;
 
 const manREAD = `\
-${clc.bold.cyan("read")} [path] [path] - Read a file`;
+${clc.bold.cyan("read")} [path] - Read a file`;
 
 const manCAT = `\
 ${clc.bold.cyan("cat")} [path] - Alias for read`;

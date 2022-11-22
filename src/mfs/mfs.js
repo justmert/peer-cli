@@ -70,7 +70,7 @@ export async function mfsOption() {
     const question = {
       type: "command",
       name: "inputPrompt",
-      autoCompletion: Object.keys(MFSCommands),
+      autoCompletion: Object.keys(MFSCommands).map((x) => x.toLowerCase()),
       prefix: "● ",
       message: `${clc.blue.bold(mfsPrompt)} ${clc.blackBright(
         currentStat
