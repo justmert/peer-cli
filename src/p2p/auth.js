@@ -26,7 +26,6 @@ export async function authAnswer(stream, connection) {
           );
           stdinToStream(streamChat, connection);
           streamToConsole(streamChat, connection);
-          console.log('hiiiii bitchess!')
         } else {
           ui.log.write(
             colorSpec.errorMsg("Sorry, the peer declined your request.")
