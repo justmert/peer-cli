@@ -3,12 +3,19 @@
 Swiss Army knife for the IPFS.
 
 - [Peer CLI](#peer-cli)
+  - [Install](#install)
   - [Features](#features)
     - [Upload File/Dir To The IPFS](#upload-filedir-to-the-ipfs)
     - [Show/Save File/Dir Contents from the IPFS](#showsave-filedir-contents-from-the-ipfs)
     - [List in the IPFS](#list-in-the-ipfs)
     - [Navigate in IPFS MFS](#navigate-in-ipfs-mfs)
     - [Peer to Peer Chat](#peer-to-peer-chat)
+
+## Install
+
+```bash
+npm install -g peer-cli
+```
 
 ## Features
 
@@ -48,6 +55,8 @@ Because files in IPFS are content-addressed and immutable, they can be complicat
 This feature lets you easily manipulate files in the IPFS MFS like you are using Unix shell! The commands are very similar, thus you will not have any difficulty using them.
 
 Available commands are:
+
+> (...) indicates that the command can take multiple arguments. (e.g. `ls` can take multiple paths)
 
 | Command | Options                    | Explanation                             |
 | ------- | -------------------------- | --------------------------------------- |
