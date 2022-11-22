@@ -4,7 +4,7 @@
   "description": "Swiss Army Knife for IPFS",
   "main": "src/main/main.js",
   "scripts": {},
-  "bin": "src/main/main.js",
+  "bin": "cli.js",
   "keywords": [
     "IPFS",
     "PEER",
