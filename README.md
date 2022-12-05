@@ -9,7 +9,6 @@ Swiss Army knife for the IPFS.
     - [Show/Save File/Dir Contents from the IPFS](#showsave-filedir-contents-from-the-ipfs)
     - [List in the IPFS](#list-in-the-ipfs)
     - [Navigate in IPFS MFS](#navigate-in-ipfs-mfs)
-    - [Peer to Peer Chat](#peer-to-peer-chat)
 
 ## Install
 
@@ -80,15 +79,3 @@ Available commands are:
 | exit    |                            | Exit the MFS shell                      |
 
 ![Peer-CLI MFS](media/mfs.gif)
-
-<br>
-
-### Peer to Peer Chat
-
-Peer to peer chat is a feature that lets you chat with any peer that is visible through peer-cli. You can either discover peers through the peer discovery feature, or you can connect to a peer manually if you know the peer ID.
-
-If you managed to connect to a peer, an authorization request will be sent to the peer. If the peer accepts the request, you two will be redirected to the chat room to say hello to each other (or whatever you want to say).
-
-The feature uses [libp2p](https://libp2p.io/) to establish a connection between peers. libp2p plugin, `libp2p-webrtc-star` is used for discovering peers and establishing a connection through WebRTC. All messages are encrypted using [libp2p-noise](https://github.com/ChainSafe/js-libp2p-noise#readme) protocol. Discovery mechanism uses signalling server that we have deployed on a Heroku server. You can use your own signalling server by changing `starAddr` in `p2p.js`. You can find the example deployment of the signalling server [here](https://suda.pl/free-webrtc-star-heroku/).
-
-![Peer-CLI Peer Chat](media/peer-chat.gif)
