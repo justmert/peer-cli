@@ -11,7 +11,7 @@ import { uploadOptionFuzzy } from "./options/upload.js";
 import { getOption } from "./options/get.js";
 import { listOption } from "./options/list.js";
 import { mfsOption } from "../mfs/mfs.js";
-import { chatNavigate } from "../p2p/chat.js";
+// import { chatNavigate } from "../p2p/chat.js";
 import figlet from "figlet";
 
 setMaxListeners(1024);
@@ -69,14 +69,14 @@ export async function main() {
             value: "navigate",
             name: "Navigate in IPFS MFS",
           },
-          {
-            value: "chat",
-            name: "Peer to peer chat",
-          },
-          {
-            value: "transfer",
-            name: "Peer to peer transfer",
-          },
+          // {
+          //   value: "chat",
+          //   name: "Peer to peer chat",
+          // },
+          // {
+          //   value: "transfer",
+          //   name: "Peer to peer transfer",
+          // },
         ],
       })
       .then(async (answers) => {
@@ -93,7 +93,7 @@ export async function main() {
           await mfsOption();
         }
         if (answers.job === "chat") {
-          await chatNavigate();
+          // await chatNavigate();
         } else if (answers.job === "transfer") {
           ui.log.write(colorSpec.infoMsg("Coming soon..."));
         }
